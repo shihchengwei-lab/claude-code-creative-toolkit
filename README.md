@@ -25,11 +25,26 @@ Token 節省行為規範。四行制派工格式、一行制回報格式、skill
 
 ## 快速開始
 
-把你需要的資料夾複製到你的 Claude Code 專案對應目錄下（`skills/`、`agents/`），然後根據各 README 客製化。
+1. 把你需要的資料夾複製到你的 Claude Code 專案對應目錄下：
+   ```bash
+   # 例：使用 Design Integrity Guard
+   cp -r design-integrity-guard/skills/ your-project/.claude/skills/
+   cp -r design-integrity-guard/agents/ your-project/.claude/agents/
+   ```
+2. 根據各子目錄的 README 客製化設定
+3. 在你的 `CLAUDE.md` 中加入對 design-principles 的引用（詳見 [design-integrity-guard/README](./design-integrity-guard/README.md)）
+
+每個組件可以獨立使用，也可以組合搭配。
+
+## 適合誰
+
+- 用 Claude Code multi-agent 架構做產品開發，但發現 agent 越跑越偏離設計方向的人
+- 想讓非工程角色（文案、美術）也能被 agent 工作流管理的團隊
+- 在 context window 吃緊的情況下，需要主動省 token 策略的專案
 
 ## 來自
 
-一個重視設計原則不可妥協的產品專案。在設計文件已佔大量 context 的前提下，這套架構讓 PM agent 自主開發時不偏離產品靈魂，同時把 token 用量壓到可控範圍。
+來自實際產品開發中的踩坑經驗。當 agent 足夠自主，它會在你不注意的時候把精心設計的文案改得面目全非、把統一的視覺語言搞得四分五裂。這套工具就是為了解決這個問題而生的。
 
 ## License
 
