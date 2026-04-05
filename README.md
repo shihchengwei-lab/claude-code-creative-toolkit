@@ -6,7 +6,7 @@
 
 ## 痛點
 
-Claude Code agent 越自主，越容易在長 session 中偏離設計初衷。CLAUDE.md 管得了技術規範，管不了精神方向。開源社群有 84k+ stars 的工程 agent 框架，但沒有人在做：
+Claude Code agent 越自主，越容易在長 session 中偏離設計初衷。CLAUDE.md 管得了技術規範，管不了精神方向。開源社群有大量工程 agent 框架，但沒有人在做：
 
 - 怎麼讓 agent 不背叛你的設計原則
 - 怎麼讓非工程角色（文案、美術）也能被 PM agent 管理
@@ -41,10 +41,6 @@ Token 節省行為規範。四行制派工格式、一行制回報格式、skill
 - 用 Claude Code multi-agent 架構做產品開發，但發現 agent 越跑越偏離設計方向的人
 - 想讓非工程角色（文案、美術）也能被 agent 工作流管理的團隊
 - 在 context window 吃緊的情況下，需要主動省 token 策略的專案
-
-## 來自
-
-來自實際產品開發中的踩坑經驗。當 agent 足夠自主，它會在你不注意的時候把精心設計的文案改得面目全非、把統一的視覺語言搞得四分五裂。這套工具就是為了解決這個問題而生的。
 
 ## License
 
