@@ -41,6 +41,11 @@ your-project/
 
 ## 快速開始：寫你的 design-principles.md
 
+先看範例 → 再填模板：
+- 📖 **範例**：[`docs/design-principles-example.md`](./docs/design-principles-example.md) — 一份填好的完整範例
+- 📝 **模板**：[`docs/design-principles-template.md`](./docs/design-principles-template.md) — 複製這份，改名為 `design-principles.md`，填入你的答案
+- 🔧 **客製化指南**：[`skills/design-integrity-guard/references/customization-guide.md`](./skills/design-integrity-guard/references/customization-guide.md) — 從模板到上線的完整步驟
+
 回答以下問題，你就有了第一版：
 
 ```markdown
