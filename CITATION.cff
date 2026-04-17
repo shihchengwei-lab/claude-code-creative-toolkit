@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+title: "Separation & Audit — Claude Code Reference Implementation"
+message: >-
+  If you use this implementation, please cite both this repository
+  and the underlying theory repository it implements.
+type: software
+authors:
+  - family-names: Shih
+    given-names: Cheng-Wei
+    alias: shihchengwei-lab
+repository-code: "https://github.com/shihchengwei-lab/separation-and-audit-claude-code"
+license: MIT
+keywords:
+  - claude-code
+  - multi-agent
+  - alignment
+  - reference-implementation
+  - separation-and-audit
+references:
+  - type: generic
+    title: "Separation & Audit: Pipeline-Level Authority Separation for Alignment Stability"
+    authors:
+      - family-names: Shih
+        given-names: Cheng-Wei
+        alias: shihchengwei-lab
+    repository: "https://github.com/shihchengwei-lab/separation-and-audit-alignment"
+    license: CC-BY-4.0
+    notes: >-
+      The theoretical foundation and alignment-distortion taxonomy that
+      this implementation realizes.

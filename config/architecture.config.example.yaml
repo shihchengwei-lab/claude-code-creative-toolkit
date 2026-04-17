@@ -1,0 +1,166 @@
+# architecture.config.yaml — Separation & Audit (Claude Code reference implementation)
+#
+# Configuration file consumed by scripts/* and agents/*.
+# Copy this to  architecture.config.yaml  in your repo root and customize.
+# Environment override:  SAA_CONFIG=/path/to/your.yaml
+#
+# Theory: https://github.com/shihchengwei-lab/separation-and-audit-alignment
+# This implementation follows the three-layer pipeline:
+#     Reasoning  →  Policy  →  Audit
+# with a Memory layer attached to Audit for drift-pattern retention.
+
+# ────────────────────────────────────────────────────────────────
+#  Policy corpus
+#  Positive specification the Main Agent (Reasoning layer) reads.
+#  NEVER contains refusal lists or prohibition language.
+#  The Policy layer and Audit layer read the derived checklist instead.
+# ────────────────────────────────────────────────────────────────
+policy_corpus:
+  - docs/policy.md
+  - docs/policy-supplement.md
+
+# ────────────────────────────────────────────────────────────────
+#  Policy checklist
+#  Machine-readable rules derived from the corpus.
+#  Used by Cold Eyes (Audit layer) to scan diffs.
+#  Format documented in docs/policy-checklist-template.md.
+# ────────────────────────────────────────────────────────────────
+policy_checklist: docs/policy-checklist.md
+
+# ────────────────────────────────────────────────────────────────
+#  Audit layer  (Cold Eyes)
+# ────────────────────────────────────────────────────────────────
+audit:
+  # Fail#1 → hint; Fail#2 → refusal log (no further hints, prevents self-arguing)
+  retry_limit: 2
+
+  # Branch-bound retry state. Not committed; stored under .git/
+  retry_state: .git/cold-eyes-retry-state.json
+
+  # Where unresolved refusals are appended
+  refusal_log: docs/refusal-log.jsonl
+
+  # Files excluded from Cold Eyes diff scanning.
+  # Include: policy corpus itself, schemas, append-only logs, the scanner scripts.
+  excluded_files:
+    - docs/policy.md
+    - docs/policy-supplement.md
+    - docs/policy-checklist.md
+    - docs/refusal-log.jsonl
+    - docs/mechanism-memory-schema.md
+    - docs/mechanism-memory.jsonl
+    - docs/gate-events.jsonl
+    - docs/architecture.md
+    - docs/classify-rules.md
+    - CLAUDE.md
+    - scripts/cold_eyes.py
+    - scripts/classify.py
+
+  excluded_dirs:
+    - .claude/
+    - agents/
+    - scripts/
+    - docs/plans/
+
+# ────────────────────────────────────────────────────────────────
+#  Memory layer  (Mechanism Memory)
+#  Abstract drift patterns harvested from past refusals.
+#  White-bear firewall: only the Policy layer reads the `summary` field.
+#  Reasoning-layer agents MUST NOT read this store.
+# ────────────────────────────────────────────────────────────────
+memory:
+  mechanism_memory: docs/mechanism-memory.jsonl
+  mechanism_schema: docs/mechanism-memory-schema.md
+
+  # Exponential decay time constant (days) for hit-count scoring.
+  # Recent hits weigh more than old hits during recall.
+  decay_tau_days: 30
+
+# ────────────────────────────────────────────────────────────────
+#  Observability
+#  Append-only event log for all three pre-commit layers on fail.
+#  Analyzed by scripts/observability/health-digest.py
+# ────────────────────────────────────────────────────────────────
+gate_events: docs/gate-events.jsonl
+
+# ────────────────────────────────────────────────────────────────
+#  Checklist parsing
+#  Regex patterns for parsing the policy-checklist into scannable rules.
+#  Defaults accept both Chinese ("錨點 1") and English ("Anchor 1") headers.
+# ────────────────────────────────────────────────────────────────
+checklist:
+  anchor_header_regex: '^## (?:錨點|Anchor) (\d+)[:：]?'
+  deathline_header_regex: '^## (?:附錄 A|Deathline)[:：]?'
+  level2_header_regex: '^### Level 2'
+
+  # Prefix shown in clause identifiers (e.g. "§1", "§2", "deathline")
+  clause_prefix: '§'
+
+  # Accepted clause IDs for mechanism_add --policy-clause validation.
+  # Use `auto` to accept any `<prefix><digit>+` or `deathline`/`生死線`.
+  valid_clauses: auto
+
+# ────────────────────────────────────────────────────────────────
+#  Pre-commit layers
+#  Executed in order by scripts/git-hooks/pre-commit.
+#  Any failure blocks the commit and appends to gate_events.
+#  Remove an entry (or set command: '') to skip that layer.
+# ────────────────────────────────────────────────────────────────
+pre_commit:
+  - id: secret_scan
+    kind: script
+    path: scripts/gates/secret_scan.py
+    description: Block well-known secret/token patterns
+
+  - id: code_quality
+    kind: shell
+    # Replace with your project's type/lint check. Examples:
+    #   TypeScript:     npx tsc --noEmit
+    #   Python:         mypy .
+    #   Rust:           cargo check
+    #   Dart/Flutter:   cd app && flutter analyze --no-fatal-infos
+    # Empty string disables this layer.
+    command: ''
+    description: Project-specific type/lint check
+
+  - id: cold_eyes
+    kind: script
+    path: scripts/audit/cold_eyes_gate.py
+    description: Policy audit with retry + refusal log
+
+# ────────────────────────────────────────────────────────────────
+#  Classifier  (Classify layer)
+#  Routes files to subagents (forward) and issues to fix-targets (backward).
+#  Full defaults live in scripts/audit/classify.py; override here as needed.
+# ────────────────────────────────────────────────────────────────
+classify:
+  # Forward: glob pattern → subagent names
+  path_rules: []
+    # Example:
+    # - pattern: 'src/**/*.ts'
+    #   dispatch: [dev-agent, qa-agent]
+    # - pattern: 'copy/**/*.md'
+    #   dispatch: [policy-guardian]
+
+  # Paths always routed to the Policy layer (e.g. user-visible copy)
+  policy_paths_exact: []
+  policy_paths_glob: []
+
+  # Paths skipped by the classifier entirely
+  whitelist_exact:
+    - CLAUDE.md
+    - docs/refusal-log.jsonl
+
+  whitelist_glob:
+    - 'docs/plans/*.md'
+    - '.git/**'
+    - '.claude/**'
+
+  # Backward: issue.type → fix-target agent names
+  issue_type_rules:
+    anchor-violation: [main-agent]
+    deathline-violation: [main-agent]
+    tone-drift: [policy-guardian]
+    logic-error: [dev-agent]
+    test-failure: [dev-agent, qa-agent]
+    security: [dev-agent]

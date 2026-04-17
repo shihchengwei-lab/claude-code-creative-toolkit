@@ -1,0 +1,7 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local user config (each project writes their own)
+architecture.config.yaml

@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Pre-commit hook — tracked template. Git hooks themselves are not version-controlled;
+# install with:
+#     cp scripts/git-hooks/pre-commit .git/hooks/pre-commit
+#     chmod +x .git/hooks/pre-commit
+#
+# Layers run in the order defined under `pre_commit:` in architecture.config.yaml.
+# Any layer failure blocks the commit and appends to the gate_events log.
+#
+# Spec: docs/architecture.md §pre-commit
+
+set -uo pipefail
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT" || exit 1
+
+STAGED_ALL=$(git diff --cached --name-only --diff-filter=ACM | tr '\n' ' ')
+
+# Load config layer list via Python helper. Each line: id<TAB>kind<TAB>path-or-command
+LAYERS=$(python -c "
+import sys
+sys.path.insert(0, 'scripts')
+from _config import load_config
+cfg = load_config()
+for layer in cfg.get('pre_commit', []):
+    lid = layer.get('id', '')
+    kind = layer.get('kind', 'script')
+    target = layer.get('path') if kind == 'script' else layer.get('command', '')
+    print(f'{lid}\t{kind}\t{target}')
+" 2>/dev/null)
+
+if [ -z "$LAYERS" ]; then
+  echo "pre-commit: no layers configured (check architecture.config.yaml)"
+  exit 0
+fi
+
+run_gate_event() {
+  local layer=$1
+  local decision=$2
+  if [ -f scripts/gates/gate_event.py ]; then
+    python scripts/gates/gate_event.py \
+      --layer "$layer" --decision "$decision" --files "$STAGED_ALL" 2>/dev/null || true
+  fi
+}
+
+# Use here-string so the loop runs in the current shell — a pipe would fork a
+# subshell, making `exit` inside the loop fail to block the commit.
+while IFS=$'\t' read -r LAYER_ID KIND TARGET; do
+  [ -z "$LAYER_ID" ] && continue
+  [ -z "$TARGET" ] && continue
+
+  case "$KIND" in
+    script)
+      if [ ! -f "$TARGET" ]; then
+        echo "pre-commit: layer '$LAYER_ID' script not found: $TARGET"
+        continue
+      fi
+      python "$TARGET"
+      EXIT_CODE=$?
+      ;;
+    shell)
+      bash -c "$TARGET"
+      EXIT_CODE=$?
+      ;;
+    *)
+      echo "pre-commit: unknown kind '$KIND' for layer '$LAYER_ID'"
+      EXIT_CODE=2
+      ;;
+  esac
+
+  if [ "$EXIT_CODE" -ne 0 ]; then
+    run_gate_event "$LAYER_ID" "fail"
+    exit "$EXIT_CODE"
+  fi
+done <<< "$LAYERS"
+
+exit 0
