@@ -1,5 +1,7 @@
 # Separation & Audit — Claude Code Reference Implementation
 
+> 🌐 **Languages:** English (this file) · [繁體中文](README.zh-TW.md)
+
 **A runnable reference implementation of the [separation-and-audit-alignment](https://github.com/shihchengwei-lab/separation-and-audit-alignment) architecture for Claude Code multi-agent projects.**
 
 > Alignment becomes less a conversational property of a single model,
