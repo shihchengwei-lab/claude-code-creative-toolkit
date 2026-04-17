@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# Pre-commit hook — tracked template. Git hooks themselves are not version-controlled;
+# install with:
+#     cp scripts/git-hooks/pre-commit .git/hooks/pre-commit
+#     chmod +x .git/hooks/pre-commit
+#
+# Layers run in the order defined under `pre_commit:` in architecture.config.yaml.
+# Any layer failure blocks the commit and appends to the gate_events log.
+#
+# Spec: docs/architecture.md §pre-commit
+
+set -uo pipefail
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT" || exit 1
+
+# Capture staged files NUL-delimited so filenames with whitespace survive.
+STAGED_FILES=()
+while IFS= read -r -d '' f; do
+  STAGED_FILES+=("$f")
+done < <(git diff --cached --name-only --diff-filter=ACM -z)
+
+# Load config layer list. Each line: id<TAB>kind<TAB>path-or-command
+# NOTE: stderr is NOT silenced — a config-loading failure must not be
+# indistinguishable from an empty config, otherwise the hook would allow
+# commits with zero gates running.
+LAYERS=$(python -c "
+import sys
+sys.path.insert(0, 'scripts')
+from _config import load_config
+cfg = load_config()
+for layer in cfg.get('pre_commit', []):
+    lid = layer.get('id', '')
+    kind = layer.get('kind', 'script')
+    target = layer.get('path') if kind == 'script' else layer.get('command', '')
+    print(f'{lid}\t{kind}\t{target}')
+")
+LAYERS_EXIT=$?
+
+if [ "$LAYERS_EXIT" -ne 0 ]; then
+  echo "pre-commit: failed to load architecture.config.yaml (see error above)" >&2
+  exit 1
+fi
+
+if [ -z "$LAYERS" ]; then
+  echo "pre-commit: no layers configured — refusing to commit without any gate" >&2
+  echo "            (check architecture.config.yaml pre_commit:)" >&2
+  exit 1
+fi
+
+run_gate_event() {
+  local layer=$1
+  local decision=$2
+  if [ -f scripts/gates/gate_event.py ]; then
+    # Pass staged files as repeated args so spaces in filenames are preserved.
+    if [ "${#STAGED_FILES[@]}" -gt 0 ]; then
+      python scripts/gates/gate_event.py \
+        --layer "$layer" --decision "$decision" \
+        --files "${STAGED_FILES[@]}" 2>/dev/null || true
+    else
+      python scripts/gates/gate_event.py \
+        --layer "$layer" --decision "$decision" 2>/dev/null || true
+    fi
+  fi
+}
+
+# Use here-string so the loop runs in the current shell — a pipe would fork a
+# subshell, making `exit` inside the loop fail to block the commit.
+while IFS=$'\t' read -r LAYER_ID KIND TARGET; do
+  [ -z "$LAYER_ID" ] && continue
+  [ -z "$TARGET" ] && continue
+
+  case "$KIND" in
+    script)
+      if [ ! -f "$TARGET" ]; then
+        echo "pre-commit: layer '$LAYER_ID' script not found: $TARGET"
+        continue
+      fi
+      python "$TARGET"
+      EXIT_CODE=$?
+      ;;
+    shell)
+      bash -c "$TARGET"
+      EXIT_CODE=$?
+      ;;
+    *)
+      echo "pre-commit: unknown kind '$KIND' for layer '$LAYER_ID'"
+      EXIT_CODE=2
+      ;;
+  esac
+
+  if [ "$EXIT_CODE" -ne 0 ]; then
+    run_gate_event "$LAYER_ID" "fail"
+    exit "$EXIT_CODE"
+  fi
+done <<< "$LAYERS"
+
+exit 0
