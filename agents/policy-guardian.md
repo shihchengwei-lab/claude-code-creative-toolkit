@@ -2,7 +2,7 @@
 name: policy-guardian
 description: Policy-layer text reviewer. Reads user-visible content (copy, UI strings, error messages, docs) and returns an evidence-level audit against your policy checklist. Runs mechanism recall on Step 0 automatically.
 model: opus
-tools: Read, Write, Edit, Grep, Glob, Bash
+tools: Read, Grep, Glob, Bash
 ---
 
 # Policy Guardian

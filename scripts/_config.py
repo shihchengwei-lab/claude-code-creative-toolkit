@@ -57,8 +57,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "docs/architecture.md",
             "docs/classify-rules.md",
             "CLAUDE.md",
-            "scripts/cold_eyes.py",
-            "scripts/classify.py",
+            "scripts/audit/cold_eyes.py",
+            "scripts/audit/classify.py",
         ],
         "excluded_dirs": [
             ".claude/",
@@ -78,7 +78,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
 
     "checklist": {
         "anchor_header_regex": r"^## (?:錨點|Anchor) (\d+)[:：]?",
-        "deathline_header_regex": r"^## (?:附錄 A|Deathline)[:：]?",
+        "deathline_header_regex": r"^## (?:附錄 A|Appendix A|Deathline)s?[:：]?",
         "level2_header_regex": r"^### Level 2",
         "clause_prefix": "§",
         "valid_clauses": "auto",

@@ -115,11 +115,18 @@ def parse_checklist(path: Path, cfg: dict) -> list[dict]:
             in_pattern_block = False
             terms = [t.strip() for t in re.split(r"[、,]", m.group(2)) if t.strip()]
             for t in terms:
+                # ASCII terms get word boundaries to avoid substring-matching
+                # on unrelated words (e.g. "skip" should not match "skipped").
+                # CJK terms keep plain substring matching — no word concept.
+                if t.isascii():
+                    pattern_src = r"\b" + re.escape(t) + r"\b"
+                else:
+                    pattern_src = re.escape(t)
                 try:
                     rules.append({
                         "clause": current_clause,
                         "type": current_type,
-                        "pattern": re.compile(re.escape(t)),
+                        "pattern": re.compile(pattern_src),
                         "source": t,
                     })
                 except re.error:
@@ -210,19 +217,21 @@ def scan_diff(diff_text: str, rules: list[dict], cfg: dict) -> list[dict]:
     if not added_lines:
         return []
 
-    joined = "\n".join(added_lines)
+    # Scan per-line — joining with \n would let regex `\s` bleed across
+    # unrelated lines (or even across different files), producing spurious hits.
     seen: set[tuple[str, str]] = set()
     issues: list[dict] = []
-    for rule in rules:
-        if rule["pattern"].search(joined):
+    for line in added_lines:
+        for rule in rules:
             key = (rule["clause"], rule["type"])
             if key in seen:
                 continue
-            seen.add(key)
-            issues.append({
-                "policy_clause": rule["clause"],
-                "type": rule["type"],
-            })
+            if rule["pattern"].search(line):
+                seen.add(key)
+                issues.append({
+                    "policy_clause": rule["clause"],
+                    "type": rule["type"],
+                })
     return issues
 
 

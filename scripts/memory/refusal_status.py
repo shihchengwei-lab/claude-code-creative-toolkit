@@ -152,8 +152,10 @@ def _extract_mechanism_interactive(entry: dict, notes: str,
         print("required fields incomplete, extraction cancelled", file=sys.stderr)
         return 1
 
-    diff_hash = entry.get("output_artifact", {}).get("diff_hash", "")
-    source_commit = diff_hash[:12] if diff_hash else ""
+    # Prefer the real git SHA (recorded at Fail#2 time). Older entries predating
+    # the head_sha field fall back to null — never use diff_hash as SHA.
+    head_sha = entry.get("output_artifact", {}).get("head_sha", "")
+    source_commit = head_sha[:12] if head_sha and head_sha != "NO-HEAD" else ""
 
     cmd = [
         sys.executable, str(scripts_root / "memory" / "mechanism_add.py"),

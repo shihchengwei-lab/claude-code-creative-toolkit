@@ -64,14 +64,23 @@ def _repo_root() -> Path:
     return Path(r.stdout.strip())
 
 
-def _current_branch() -> str:
-    r = _run(["git", "rev-parse", "--abbrev-ref", "HEAD"])
-    return r.stdout.strip() if r.returncode == 0 else "HEAD-detached"
-
-
 def _head_sha() -> str:
     r = _run(["git", "rev-parse", "HEAD"])
     return r.stdout.strip() if r.returncode == 0 else "NO-HEAD"
+
+
+def _current_branch() -> str:
+    # `git rev-parse --abbrev-ref HEAD` returns the literal string "HEAD"
+    # (rc=0) when in detached-HEAD state — not an error, so the old rc-only
+    # fallback missed this case. Use the SHA prefix instead so the retry-state
+    # key does not collapse across unrelated checkouts.
+    r = _run(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    if r.returncode != 0:
+        return "HEAD-detached"
+    name = r.stdout.strip()
+    if name == "HEAD":
+        return f"detached:{_head_sha()[:12]}"
+    return name
 
 
 def _staged_files() -> list[str]:
@@ -149,6 +158,7 @@ def _append_refusal(log_path: Path, issues: list[dict], retry_count: int) -> dic
         "task_id": task_id,
         "output_artifact": {
             "diff_hash": _staged_diff_hash(),
+            "head_sha": _head_sha(),
             "files": _staged_files(),
         },
         "policy_clauses": sorted({i["policy_clause"] for i in issues}),

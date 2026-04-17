@@ -53,8 +53,8 @@ audit:
     - docs/architecture.md
     - docs/classify-rules.md
     - CLAUDE.md
-    - scripts/cold_eyes.py
-    - scripts/classify.py
+    - scripts/audit/cold_eyes.py
+    - scripts/audit/classify.py
 
   excluded_dirs:
     - .claude/
@@ -90,7 +90,7 @@ gate_events: docs/gate-events.jsonl
 # ────────────────────────────────────────────────────────────────
 checklist:
   anchor_header_regex: '^## (?:錨點|Anchor) (\d+)[:：]?'
-  deathline_header_regex: '^## (?:附錄 A|Deathline)[:：]?'
+  deathline_header_regex: '^## (?:附錄 A|Appendix A|Deathline)s?[:：]?'
   level2_header_regex: '^### Level 2'
 
   # Prefix shown in clause identifiers (e.g. "§1", "§2", "deathline")

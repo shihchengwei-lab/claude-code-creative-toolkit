@@ -31,12 +31,17 @@ def _glob_match(path: str, pattern: str) -> bool:
     pattern = _normalize(pattern)
     if "**" not in pattern:
         return fnmatch.fnmatch(path, pattern)
-    parts = pattern.split("**")
-    regex_parts = [
-        re.escape(p).replace(r"\*", "[^/]*").replace(r"\?", ".")
-        for p in parts
-    ]
-    regex = ".*".join(regex_parts)
+
+    # Standard glob semantics: /**/ matches zero or more path segments.
+    # e.g. `src/**/*.ts` must match `src/foo.ts` (zero) AND `src/a/b/foo.ts` (two).
+    # Build the regex via escape → substitute, handling /**/, **/, /**, ** in order.
+    regex = re.escape(pattern)
+    regex = regex.replace(r"/\*\*/", "(?:/.*)?/")  # /**/ : zero-or-more segments with slash
+    regex = regex.replace(r"\*\*/", "(?:.*/)?")    # **/  at start : zero-or-more leading segments
+    regex = regex.replace(r"/\*\*", "(?:/.*)?")    # /**  at end   : zero-or-more trailing segments
+    regex = regex.replace(r"\*\*", ".*")           # standalone ** : any char including slash
+    regex = regex.replace(r"\*", "[^/]*")          # single * : within-segment wildcard
+    regex = regex.replace(r"\?", ".")
     return re.fullmatch(regex, path) is not None
 
 

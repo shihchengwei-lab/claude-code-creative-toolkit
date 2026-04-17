@@ -64,11 +64,10 @@ PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
         re.compile(r"-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----"),
         "PEM Private Key",
     ),
-    (
-        "bearer-token",
-        re.compile(r"[Bb]earer\s+[A-Za-z0-9._~+/=-]{40,}"),
-        "Bearer Token (length >= 40)",
-    ),
+    # Deliberately NOT scanning generic "Bearer <token>" — too broad:
+    # fires on OpenAPI specs, README curl examples, OAuth tutorials.
+    # JWT-shaped bearer tokens are already covered by supabase-jwt
+    # (and the full JWT form is 3 base64url segments separated by dots).
 ]
 
 

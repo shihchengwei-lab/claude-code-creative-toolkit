@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 import uuid
@@ -101,25 +100,14 @@ def _validate_clause(clause: str, cfg: dict) -> bool:
     return True  # unknown setting — permissive
 
 
-def _atomic_append(path: Path, entry: dict) -> None:
+def _true_append(path: Path, entry: dict) -> None:
+    """Append one JSONL line. Does not read-rewrite the file — preserves any
+    pre-existing malformed lines, and remains crash-safe (a partial write
+    corrupts only the new line, never older entries).
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    existing: list[dict] = []
-    if path.exists():
-        for line in path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                existing.append(json.loads(line))
-            except json.JSONDecodeError:
-                pass  # skip bad line, preserve append
-
-    existing.append(entry)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with tmp.open("w", encoding="utf-8", newline="\n") as f:
-        for item in existing:
-            f.write(json.dumps(item, ensure_ascii=False) + "\n")
-    os.replace(tmp, path)
+    with path.open("a", encoding="utf-8", newline="\n") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
 def main() -> int:
@@ -213,7 +201,7 @@ def main() -> int:
     path = Path(args.jsonl) if args.jsonl else resolve_path(
         cfg["memory"]["mechanism_memory"]
     )
-    _atomic_append(path, entry)
+    _true_append(path, entry)
 
     print(f"mechanism added: {entry['id']}")
     print(f"  clause: {entry['policy_clause']}  tags: {', '.join(tags)}")

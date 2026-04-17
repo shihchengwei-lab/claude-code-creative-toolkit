@@ -108,9 +108,13 @@ print(n)
 fi
 
 # ---- Mechanism memory threshold (>= 5, show once per 7d) ----
+# Using `wc -l` not `grep -c .` — on an empty file grep prints "0" AND exits 1,
+# causing `|| echo 0` to fire and produce "0\n0" in command substitution,
+# which then fails integer comparison.
 if [ -n "$MECH_MEMORY" ] && [ -f "$MECH_MEMORY" ]; then
-  MECH_COUNT=$(grep -c . "$MECH_MEMORY" 2>/dev/null || echo "0")
-  if [ "$MECH_COUNT" -ge 5 ]; then
+  MECH_COUNT=$(wc -l < "$MECH_MEMORY" 2>/dev/null || echo 0)
+  MECH_COUNT=${MECH_COUNT// /}
+  if [ "$MECH_COUNT" -ge 5 ] 2>/dev/null; then
     LAST=$(last_shown "mechanism")
     if [ $((NOW_EPOCH - LAST)) -ge "$WEEK" ]; then
       echo "info: mechanism memory has $MECH_COUNT entries"
@@ -123,8 +127,9 @@ fi
 
 # ---- Gate events threshold (>= 50, show once per 7d) ----
 if [ -n "$GATE_EVENTS" ] && [ -f "$GATE_EVENTS" ]; then
-  GATE_COUNT=$(grep -c . "$GATE_EVENTS" 2>/dev/null || echo "0")
-  if [ "$GATE_COUNT" -ge 50 ]; then
+  GATE_COUNT=$(wc -l < "$GATE_EVENTS" 2>/dev/null || echo 0)
+  GATE_COUNT=${GATE_COUNT// /}
+  if [ "$GATE_COUNT" -ge 50 ] 2>/dev/null; then
     LAST=$(last_shown "gate_events")
     if [ $((NOW_EPOCH - LAST)) -ge "$WEEK" ]; then
       echo "info: gate events has $GATE_COUNT fail records"

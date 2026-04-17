@@ -95,7 +95,7 @@ One line per entry:
 |---|---|:---:|---|
 | `timestamp` | string (ISO 8601) | ✓ | UTC timestamp of Cold Eyes #2 fail, format `2026-04-17T14:32:05Z` |
 | `task_id` | string | ✓ | Task identifier. Resolution order: branch name → HEAD commit SHA → session id |
-| `output_artifact` | object | ✓ | Reference to the rejected output: `diff_hash` (SHA256 of the diff) and `files` (changed file list) |
+| `output_artifact` | object | ✓ | Reference to the rejected output: `diff_hash` (SHA256 of the diff), `head_sha` (git HEAD SHA at the moment of rejection), and `files` (changed file list) |
 | `policy_clauses` | array\<string\> | ✓ | Violated clause ids, e.g. `["§2", "§4"]` |
 | `issue_types` | array\<string\> | ✓ | Cold Eyes issue type enum, e.g. `["tone-drift", "anchor-violation"]` |
 | `retry_count` | integer | ✓ | Always `2` (the only trigger condition) |
@@ -111,13 +111,13 @@ readers do not branch on presence/absence.
 **Just written (pending):**
 
 ```json
-{"timestamp":"2026-04-17T14:32:05Z","task_id":"feat/new-feature","output_artifact":{"diff_hash":"a3f5c9b2e1d4...","files":["src/feature.ts","docs/feature.md"]},"policy_clauses":["§2","§4"],"issue_types":["tone-drift","anchor-violation"],"retry_count":2,"user_decision":null,"user_decision_notes":null,"resolved_at":null}
+{"timestamp":"2026-04-17T14:32:05Z","task_id":"feat/new-feature","output_artifact":{"diff_hash":"a3f5c9b2e1d4...","head_sha":"7b2c91e4...","files":["src/feature.ts","docs/feature.md"]},"policy_clauses":["§2","§4"],"issue_types":["tone-drift","anchor-violation"],"retry_count":2,"user_decision":null,"user_decision_notes":null,"resolved_at":null}
 ```
 
 **After user resolution:**
 
 ```json
-{"timestamp":"2026-04-17T14:32:05Z","task_id":"feat/new-feature","output_artifact":{"diff_hash":"a3f5c9b2e1d4...","files":["src/feature.ts","docs/feature.md"]},"policy_clauses":["§2","§4"],"issue_types":["tone-drift","anchor-violation"],"retry_count":2,"user_decision":"split","user_decision_notes":"Copy and implementation mixed in one task; split into copy-only and impl-only branches.","resolved_at":"2026-04-17T15:10:22Z"}
+{"timestamp":"2026-04-17T14:32:05Z","task_id":"feat/new-feature","output_artifact":{"diff_hash":"a3f5c9b2e1d4...","head_sha":"7b2c91e4...","files":["src/feature.ts","docs/feature.md"]},"policy_clauses":["§2","§4"],"issue_types":["tone-drift","anchor-violation"],"retry_count":2,"user_decision":"split","user_decision_notes":"Copy and implementation mixed in one task; split into copy-only and impl-only branches.","resolved_at":"2026-04-17T15:10:22Z"}
 ```
 
 ---

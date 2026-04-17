@@ -33,8 +33,9 @@ def main() -> int:
                         help="Gate layer id (e.g. secret_scan, code_quality, cold_eyes)")
     parser.add_argument("--decision", required=True,
                         help="Outcome (e.g. fail, fail_1, fail_2)")
-    parser.add_argument("--files", default="",
-                        help="Whitespace-separated file list")
+    parser.add_argument("--files", nargs="*", default=[],
+                        help="File paths — pass each as a separate arg so paths "
+                             "with whitespace are preserved")
     parser.add_argument("--config", default=None,
                         help="Path to architecture.config.yaml")
     args = parser.parse_args()
@@ -42,7 +43,7 @@ def main() -> int:
     cfg = load_config(args.config)
     log_path = resolve_path(cfg["gate_events"])
 
-    files = [f for f in args.files.split() if f]
+    files = [f for f in args.files if f]
     entry = {
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "layer": args.layer,
